@@ -1,4 +1,5 @@
 # --- Begin activator.py ---
+import customtkinter as ctk
 import hashlib
 import json
 from cryptography.fernet import Fernet
@@ -13,7 +14,7 @@ import arabic_reshaper
 import sqlite3
 import openpyxl
 from openpyxl.styles import Alignment
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 # =======================================================================================================================================================================================
 #region اضافه کردن قابلیت نمایش و حذف لایسنس
 # ======================================================================================================================================================================================
@@ -192,6 +193,7 @@ def show_license_info():
     remaining_days = (expiration_date - datetime.now()).days
 
     license_info = (
+        f"نام: {status.get('name', 'نامشخص')}\n"
         f"تاریخ انقضا: {status['expiration_date']}\n"
         f"روزهای باقی‌مانده: {remaining_days} روز"
     )
@@ -229,7 +231,7 @@ DEFAULT_MATERIALS_FILE = "materials_data.json"
 
 
 # فایل پایگاه داده SQLite
-DB_FILE = "materials_data.db"
+DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "materials_data.db")
 
 #endregion
 # =======================================================================================================================================================================================
@@ -1558,22 +1560,14 @@ class DietCalculatorApp:
 # =======================================================================================================================================================================================
 # regionاجرای اصلی برنامه
 # ==============================================================================================================================================================================
-def populate_default_materials():  # noqa: F811
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    for name, data in default_materials_data.items():
-        cursor.execute("""
-        INSERT OR IGNORE INTO materials (name, data)
-        VALUES (?, ?)
-        """, (name, json.dumps(data, ensure_ascii=False)))
-    conn.commit()
-    conn.close()
-
-
 # مقداردهی اولیه پایگاه داده و داده‌های پیش‌فرض
 init_db()
 populate_default_materials()
+populate_default_species()
 
+# بارگذاری مواد اولیه و گونه‌ها از پایگاه داده
+materials_data = load_materials_from_db()
+species_data = load_species_from_db()  # بارگذاری گونه‌ها
 # بارگذاری مواد اولیه از پایگاه داده
 materials_data = load_materials_from_db()
 if __name__ == "__main__":
