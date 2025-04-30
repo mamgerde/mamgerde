@@ -1475,7 +1475,7 @@ class DietCalculatorApp:
                 raise ValueError("گونه نامعتبر است.")
 
             # جمع‌آوری اطلاعات مواد اولیه و درصدها
-            material_weights = {}
+            combined_material_weights = {}
             total_percentage = 0  # جمع درصد کل مواد اولیه
 
             for widgets in self.materials_widgets:
@@ -1493,7 +1493,12 @@ class DietCalculatorApp:
                     if weight < 0 or weight > 100:
                         raise ValueError("درصد وزنی باید بین 0 و 100 باشد.")
                     total_percentage += weight
-                    material_weights[material] = weight / 100  # تبدیل به درصد
+
+                    # جمع کردن مقادیر مواد همنام
+                    if material in combined_material_weights:
+                        combined_material_weights[material] += weight / 100  # تبدیل به درصد
+                    else:
+                        combined_material_weights[material] = weight / 100
                 except ValueError:
                     raise ValueError("درصد وزنی باید یک عدد معتبر باشد.")
 
@@ -1503,14 +1508,14 @@ class DietCalculatorApp:
 
             # محاسبه جیره
             final_composition = {}
-            for material, weight in material_weights.items():
+            for material, weight in combined_material_weights.items():
                 for param, value in materials_data[material].items():
                     if "(%)" in param:
                         # پارامتر درصدی
                         final_composition[param] = final_composition.get(param, 0) + value * weight
                     else:
                         # پارامتر غیر درصدی (تبدیل به واحد مناسب)
-                        final_composition[param] = final_composition.get(param, 0) + value * weight * 1
+                        final_composition[param] = final_composition.get(param, 0) + value * weight
 
             # مقایسه با استاندارد گونه
             standard_data = species_data[selected_species]
