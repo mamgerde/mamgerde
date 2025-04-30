@@ -342,7 +342,7 @@ def populate_default_species():
     
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    for name, data in default_materials_data.items():
+    for name, data in species_data.items():
         cursor.execute("""
         INSERT OR IGNORE INTO materials (name, data)
         VALUES (?, ?)
@@ -1241,20 +1241,36 @@ class DietCalculatorApp:
         self.update_species_combobox()
         
     def update_species_combobox(self):
-        self.species_combobox["values"] = list(self.species_data.keys(), width=50)
+        self.species_combobox["values"] = list(self.species_data.keys())
 
     def add_material_row(self):
         row = len(self.materials_widgets)
-        material_combobox = ttk.Combobox(self.materials_frame, values=list(materials_data.keys()), width=30)
+        material_combobox = ttk.Combobox(self.materials_frame, values=list(materials_data.keys()), width=40)
         material_combobox.grid(row=row, column=0, padx=5, pady=5)
         material_combobox.set(list(materials_data.keys())[0] if materials_data else "")
 
         percentage_entry = tk.Entry(self.materials_frame)
         percentage_entry.grid(row=row, column=1, padx=5, pady=5)
         percentage_entry.insert(0, "0")
-
+# دکمه حذف برای حذف ردیف
+        remove_button = tk.Button(self.materials_frame, text="حذف", command=lambda: self.remove_material_row(row))
+        remove_button.grid(row=row, column=2, padx=5, pady=5)
         self.materials_widgets.append((material_combobox, percentage_entry))
+    def remove_material_row(self, row):
 
+    # حذف ویجت‌های ردیف از پنجره
+        for widget in self.materials_widgets[row]:
+            widget.grid_forget()
+            widget.destroy()
+    
+    # حذف ردیف از لیست
+            del self.materials_widgets[row]
+    
+    # به‌روزرسانی شماره ردیف‌ها
+        for i, (combobox, entry, button) in enumerate(self.materials_widgets):
+            combobox.grid(row=i, column=0, padx=5, pady=5)
+        entry.grid(row=i, column=1, padx=5, pady=5)
+        button.grid(row=i, column=2, padx=5, pady=5)   
     def open_add_material_window(self):
         add_window = tk.Toplevel(self.root)
         add_window.title("اضافه کردن ماده اولیه جدید")
@@ -1568,8 +1584,6 @@ populate_default_species()
 # بارگذاری مواد اولیه و گونه‌ها از پایگاه داده
 materials_data = load_materials_from_db()
 species_data = load_species_from_db()  # بارگذاری گونه‌ها
-# بارگذاری مواد اولیه از پایگاه داده
-materials_data = load_materials_from_db()
 if __name__ == "__main__":
     root = tk.Tk()
     app = DietCalculatorApp(root)
