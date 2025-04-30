@@ -1162,7 +1162,8 @@ class DietCalculatorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("محاسبه جیره غذایی")
-        
+                # مقداردهی self.style برای مدیریت تم‌ها
+        self.style = ttk.Style(self.root)
         # تعریف main_frame برای مدیریت ویجت‌ها
         self.main_frame = tk.Frame(self.root)
         self.main_frame.pack(fill="both", expand=True, padx=20, pady=20)
