@@ -244,8 +244,15 @@ def reshape_text(text):
 # =======================================================================================================================================================================================
 # regionتنظیمات پایگاه داده SQLite
 # ===========================================================================================================================================================================
-def init_db():
-    conn = sqlite3.connect(DB_FILE)
+# فایل‌های جداگانه برای دیتابیس‌ها
+MATERIALS_DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "materials_data.db")
+SPECIES_DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "species_data.db")
+
+# =======================================================================================================================================================================================
+# تنظیمات پایگاه داده SQLite برای مواد اولیه
+# =======================================================================================================================================================================================
+def init_materials_db():
+    conn = sqlite3.connect(MATERIALS_DB_FILE)
     cursor = conn.cursor()
     # ایجاد جدول مواد اولیه
     cursor.execute("""
@@ -255,6 +262,40 @@ def init_db():
         data TEXT NOT NULL
     )
     """)
+    conn.commit()
+    conn.close()
+
+def save_material_to_db(name, material_data):
+    conn = sqlite3.connect(MATERIALS_DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT OR REPLACE INTO materials (name, data)
+    VALUES (?, ?)
+    """, (name, json.dumps(material_data, ensure_ascii=False)))
+    conn.commit()
+    conn.close()
+
+def delete_material_from_db(name):
+    conn = sqlite3.connect(MATERIALS_DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM materials WHERE name = ?", (name,))
+    conn.commit()
+    conn.close()
+
+def load_materials_from_db():
+    conn = sqlite3.connect(MATERIALS_DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, data FROM materials")
+    rows = cursor.fetchall()
+    conn.close()
+    return {name: json.loads(data) for name, data in rows}
+
+# =======================================================================================================================================================================================
+# تنظیمات پایگاه داده SQLite برای گونه‌ها
+# =======================================================================================================================================================================================
+def init_species_db():
+    conn = sqlite3.connect(SPECIES_DB_FILE)
+    cursor = conn.cursor()
     # ایجاد جدول گونه‌ها
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS species (
@@ -266,9 +307,8 @@ def init_db():
     conn.commit()
     conn.close()
 
-# ذخیره گونه‌ها در پایگاه داده
 def save_species_to_db(name, species_data):
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(SPECIES_DB_FILE)
     cursor = conn.cursor()
     cursor.execute("""
     INSERT OR REPLACE INTO species (name, data)
@@ -277,58 +317,26 @@ def save_species_to_db(name, species_data):
     conn.commit()
     conn.close()
 
-# حذف گونه از پایگاه داده
 def delete_species_from_db(name):
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(SPECIES_DB_FILE)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM species WHERE name = ?", (name,))
     conn.commit()
     conn.close()
 
-# بارگذاری گونه‌ها از پایگاه داده
 def load_species_from_db():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(SPECIES_DB_FILE)
     cursor = conn.cursor()
     cursor.execute("SELECT name, data FROM species")
     rows = cursor.fetchall()
     conn.close()
     return {name: json.loads(data) for name, data in rows}
 
-# ذخیره مواد اولیه در پایگاه داده
-def save_material_to_db(name, material_data):
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("""
-    INSERT OR REPLACE INTO materials (name, data)
-    VALUES (?, ?)
-    """, (name, json.dumps(material_data, ensure_ascii=False)))
-    conn.commit()
-    conn.close()
-
-# حذف مواد اولیه از پایگاه داده
-def delete_material_from_db(name):
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM materials WHERE name = ?", (name,))
-    conn.commit()
-    conn.close()
-
-# بارگذاری مواد اولیه از پایگاه داده
-def load_materials_from_db():
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT name, data FROM materials")
-    rows = cursor.fetchall()
-    conn.close()
-    return {name: json.loads(data) for name, data in rows}
-#
-
-
-
-# پر کردن داده‌های مواد اولیه پیش‌فرض در پایگاه داده
+# =======================================================================================================================================================================================
+# پر کردن داده‌های پیش‌فرض
+# =======================================================================================================================================================================================
 def populate_default_materials():
-
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(MATERIALS_DB_FILE)
     cursor = conn.cursor()
     for name, data in default_materials_data.items():
         cursor.execute("""
@@ -337,14 +345,13 @@ def populate_default_materials():
         """, (name, json.dumps(data, ensure_ascii=False)))
     conn.commit()
     conn.close()
-# پر کردن داده‌های مواد اولیه پیش‌فرض در پایگاه داده
+
 def populate_default_species():
-    
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(SPECIES_DB_FILE)
     cursor = conn.cursor()
     for name, data in species_data.items():
         cursor.execute("""
-        INSERT OR IGNORE INTO materials (name, data)
+        INSERT OR IGNORE INTO species (name, data)
         VALUES (?, ?)
         """, (name, json.dumps(data, ensure_ascii=False)))
     conn.commit()
@@ -1648,14 +1655,17 @@ class DietCalculatorApp:
 # =======================================================================================================================================================================================
 # regionاجرای اصلی برنامه
 # ==============================================================================================================================================================================
-# مقداردهی اولیه پایگاه داده و داده‌های پیش‌فرض
-init_db()
+# مقداردهی اولیه پایگاه داده‌ها
+init_materials_db()
+init_species_db()
+
+# پر کردن داده‌های پیش‌فرض
 populate_default_materials()
 populate_default_species()
 
-# بارگذاری مواد اولیه و گونه‌ها از پایگاه داده
+# بارگذاری داده‌ها از پایگاه داده
 materials_data = load_materials_from_db()
-species_data = load_species_from_db()  # بارگذاری گونه‌ها
+species_data = load_species_from_db()
 if __name__ == "__main__":
     root = tk.Tk()
     app = DietCalculatorApp(root)
