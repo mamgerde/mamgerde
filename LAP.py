@@ -1155,6 +1155,7 @@ class DietCalculatorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("محاسبه جیره غذایی")
+        self.add_toolbar()
 
         # ترتیب استاندارد پارامترها
         self.standard_order = [
@@ -1208,24 +1209,18 @@ class DietCalculatorApp:
         self.species_combobox.set("")
         
 
-        # دکمه‌های مربوط به گونه
-        tk.Button(root, text=reshape_text("اضافه کردن گونه جدید"), command=self.open_add_species_window).grid(row=0, column=2, padx=5, pady=5)
-        tk.Button(root, text=reshape_text("مدیریت گونه‌ها"), command=self.manage_species_window).grid(row=0, column=3, padx=5, pady=5)
+
 
         # بخش مواد اولیه
         self.materials_frame = tk.Frame(root)
         self.materials_frame.grid(row=1, column=0, columnspan=4, padx=5, pady=5)
         self.materials_widgets = []
         self.add_material_row()
-        #جدید
-        tk.Button(root, text=reshape_text("نمایش اطلاعات لایسنس"), command=show_license_info).grid(row=5, column=0, padx=5, pady=5)
-        tk.Button(root, text=reshape_text("حذف لایسنس"), command=delete_license_status).grid(row=5, column=1, padx=5, pady=5)
+
         #
         tk.Button(root, text=reshape_text("اضافه کردن ماده اولیه"), command=self.add_material_row).grid(row=2, column=0, padx=5, pady=5)
         tk.Button(root, text=reshape_text("محاسبه جیره"), command=self.calculate_diet).grid(row=2, column=1, padx=5, pady=5)
-        tk.Button(root, text=reshape_text("اضافه کردن ماده اولیه جدید"), command=self.open_add_material_window).grid(row=2, column=2, padx=5, pady=5)
-        tk.Button(root, text=reshape_text("مدیریت مواد اولیه"), command=self.manage_materials_window).grid(row=2, column=3, padx=5, pady=5)
-        #tk.Button(root, text=reshape_text("تغییر تم برنامه"), command=self.open_theme_window).grid(row=5, column=2, padx=5, pady=5)
+
         # جدول نتایج
         self.results_table = ttk.Treeview(root, columns=("param", "calculated", "standard", "difference"), show="headings", height=15)
         self.results_table.grid(row=3, column=0, columnspan=4, padx=5, pady=5)
@@ -1466,7 +1461,56 @@ class DietCalculatorApp:
 
     def update_species_combobox(self):  # noqa: F811
         self.species_combobox["values"] = list(species_data.keys())
+#====================
+                # اضافه کردن تول‌بار
+        
+    def add_toolbar(self):
+        """اضافه کردن تول‌بار به برنامه"""
+        menubar = tk.Menu(self.root)
 
+        # منوی File
+        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="اضافه کردن ماده اولیه جدید", command=self.open_add_material_window)
+        file_menu.add_command(label="اضافه کردن گونه جدید", command=self.open_add_species_window)
+        menubar.add_cascade(label="File", menu=file_menu)
+
+        # منوی Edit
+        edit_menu = tk.Menu(menubar, tearoff=0)
+        edit_menu.add_command(label="مدیریت مواد اولیه", command=self.manage_materials_window)
+        edit_menu.add_command(label="مدیریت گونه‌ها", command=self.manage_species_window)
+        edit_menu.add_command(label="ذخیره به اکسل", command=self.export_to_excel)
+        menubar.add_cascade(label="Edit", menu=edit_menu)
+
+        # منوی Tools
+        tools_menu = tk.Menu(menubar, tearoff=0)
+        tools_menu.add_command(label="نمایش اطلاعات لایسنس", command=show_license_info)
+        tools_menu.add_command(label="حذف لایسنس", command=delete_license_status)
+        menubar.add_cascade(label="Tools", menu=tools_menu)
+
+        # منوی Help
+        help_menu = tk.Menu(menubar, tearoff=0)
+        help_menu.add_command(label="معرفی برنامه", command=self.show_about_window)
+        menubar.add_cascade(label="Help", menu=help_menu)
+
+        # اضافه کردن منو به برنامه
+        self.root.config(menu=menubar)
+
+    def show_about_window(self):
+        """نمایش پنجره معرفی برنامه"""
+        about_window = tk.Toplevel(self.root)
+        about_window.title("درباره برنامه")
+        about_window.geometry("600x200")
+
+        about_text = """
+        نام برنامه: محاسبه جیره غذایی مخصوص آبزیان
+        نسخه: 1.0
+        توسعه‌دهنده: یاسین مویدفرد
+        توضیحات: این برنامه با کمک صنعت آبزی پروری طراحی و ساخته شده است
+        از عزیزان فعال در این صنعت دعوت میشود تا با بررسی این برنامه به بهبود هرچه بیشتر این برنامه کمک کنند
+        """
+        tk.Label(about_window, text=about_text, justify="right", padx=10, pady=10).pack()
+        
+#================
     def calculate_diet(self):
         """محاسبه جیره بر اساس مواد اولیه و درصدهای وارد شده"""
         try:
