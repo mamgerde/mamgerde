@@ -19,8 +19,15 @@ from tkinter import messagebox, simpledialog
 #region اضافه کردن قابلیت نمایش و حذف لایسنس
 # ======================================================================================================================================================================================
 # مسیر دایرکتوری فعلی
-CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+# پیدا کردن مسیر فایل اجرایی (چه در حالت .exe و چه در حالت .py)
+if getattr(sys, 'frozen', False):  # اگر برنامه به EXE تبدیل شده باشد
+    CURRENT_DIRECTORY = os.path.dirname(sys.executable)
+else:
+    CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+
+# تنظیم مسیر فایل لایسنس
 ACTIVATION_STATUS_FILE = os.path.join(CURRENT_DIRECTORY, "activation_status.json")
+print(f"ACTIVATION_STATUS_FILE: {ACTIVATION_STATUS_FILE}")
 
 # Define a valid Base64 key for Fernet encryption
 SECRET_KEY = b'Y2hvb3NlQVN0cm9uZ0JhU2U2NEVuY3J5cHRpb25LZXk='  # Replace with your valid Fernet key
@@ -171,9 +178,34 @@ else:
 ACTIVATION_STATUS_FILE = "activation_status.json"  # فایل وضعیت لایسنس
 
 # مسیر فایل JSON
-CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
-ACTIVATION_STATUS_FILE = os.path.join(CURRENT_DIRECTORY, "activation_status.json")
+# پیدا کردن مسیر فایل اجرایی (چه در حالت .exe و چه در حالت .py)
+if getattr(sys, 'frozen', False):  # اگر برنامه به EXE تبدیل شده باشد
+    CURRENT_DIRECTORY = os.path.dirname(sys.executable)
+else:
+    CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
+# تنظیم مسیر فایل لایسنس
+ACTIVATION_STATUS_FILE = os.path.join(CURRENT_DIRECTORY, "activation_status.json")
+print(f"ACTIVATION_STATUS_FILE: {ACTIVATION_STATUS_FILE}")
+def load_activation_status():  # noqa: F811
+    """بارگذاری وضعیت فعال‌سازی از فایل JSON."""
+    if not os.path.exists(ACTIVATION_STATUS_FILE):  # اگر فایل وجود نداشت
+        print("Activation file not found. Creating a new one.")
+        return {"activated": False}
+    try:
+        with open(ACTIVATION_STATUS_FILE, "r") as file:
+            return json.load(file)
+    except json.JSONDecodeError:
+        print("Activation file is corrupted. Resetting activation status.")
+        return {"activated": False}
+def save_activation_status(status):  # noqa: F811
+    """ذخیره وضعیت فعال‌سازی در فایل JSON."""
+    try:
+        with open(ACTIVATION_STATUS_FILE, "w") as file:
+            json.dump(status, file)
+        print(f"Activation status saved to: {ACTIVATION_STATUS_FILE}")
+    except Exception as e:
+        print(f"Error saving activation status: {e}")
 def load_license_status():  # noqa: F811
     """وضعیت لایسنس را از فایل بارگذاری می‌کند."""
     if not os.path.exists(ACTIVATION_STATUS_FILE):
@@ -201,11 +233,14 @@ def show_license_info():
 
 def delete_license_status():
     """حذف وضعیت لایسنس."""
-    if os.path.exists(ACTIVATION_STATUS_FILE):
-        os.remove(ACTIVATION_STATUS_FILE)
-        messagebox.showinfo("اطلاع", "لایسنس با موفقیت حذف شد.")
-    else:
-        messagebox.showwarning("هشدار", "هیچ لایسنسی برای حذف وجود ندارد.")
+    try:
+        if os.path.exists(ACTIVATION_STATUS_FILE):
+            os.remove(ACTIVATION_STATUS_FILE)
+            messagebox.showinfo("اطلاع", "لایسنس با موفقیت حذف شد.")
+        else:
+            messagebox.showwarning("هشدار", "هیچ لایسنسی برای حذف وجود ندارد.")
+    except Exception as e:
+        print(f"Error deleting license file: {e}")
 
 def show_license_info():  # noqa: F811
     """نمایش اطلاعات لایسنس."""
@@ -223,17 +258,11 @@ def show_license_info():  # noqa: F811
         f"روزهای باقی‌مانده: {remaining_days} روز"
     )
     messagebox.showinfo("اطلاعات لایسنس", license_info)
+print(f"Current Directory: {CURRENT_DIRECTORY}")
+print(f"License File Path: {ACTIVATION_STATUS_FILE}")
 #endregion
 # =======================================================================================================================================================================================
-#region # تنظیمات و متغیرهای ثابت
-# فایل ذخیره مواد اولیه پیش‌فرض
-DEFAULT_MATERIALS_FILE = "materials_data.json"
 
-
-# فایل پایگاه داده SQLite
-DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "materials_data.db")
-
-#endregion
 # =======================================================================================================================================================================================
 # regionتابع اصلاح نمایش متن فارسی
 # =======================================================================================================================================================================================
@@ -244,17 +273,23 @@ def reshape_text(text):
 # =======================================================================================================================================================================================
 # regionتنظیمات پایگاه داده SQLite
 # ===========================================================================================================================================================================
-# فایل‌های جداگانه برای دیتابیس‌ها
-MATERIALS_DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "materials_data.db")
-SPECIES_DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "species_data.db")
+if getattr(sys, 'frozen', False):  # اگر برنامه به EXE تبدیل شده باشد
+    CURRENT_DIRECTORY = os.path.dirname(sys.executable)  # مسیر فایل اجرایی
+else:
+    CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))  # مسیر فایل اسکریپت
 
+# تنظیم مسیر فایل‌های دیتابیس
+MATERIALS_DB_FILE = os.path.join(CURRENT_DIRECTORY, "materials_data.db")
+SPECIES_DB_FILE = os.path.join(CURRENT_DIRECTORY, "species_data.db")
+
+print(f"MATERIALS_DB_FILE: {MATERIALS_DB_FILE}")
+print(f"SPECIES_DB_FILE: {SPECIES_DB_FILE}")
 # =======================================================================================================================================================================================
 # تنظیمات پایگاه داده SQLite برای مواد اولیه
 # =======================================================================================================================================================================================
 def init_materials_db():
     conn = sqlite3.connect(MATERIALS_DB_FILE)
     cursor = conn.cursor()
-    # ایجاد جدول مواد اولیه
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS materials (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -264,6 +299,7 @@ def init_materials_db():
     """)
     conn.commit()
     conn.close()
+
 
 def save_material_to_db(name, material_data):
     conn = sqlite3.connect(MATERIALS_DB_FILE)
