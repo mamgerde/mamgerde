@@ -1516,8 +1516,9 @@ class DietCalculatorApp:
         از عزیزان فعال در این صنعت دعوت میشود تا با بررسی این برنامه به بهبود هرچه بیشتر این برنامه کمک کنند
         """
         tk.Label(about_window, text=about_text, justify="right", padx=10, pady=10).pack()
-        
+#endregion        
 #================
+# region حل جیره
     def calculate_diet(self):
         """محاسبه جیره بر اساس مواد اولیه و درصدهای وارد شده"""
         try:
