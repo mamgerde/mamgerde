@@ -1253,24 +1253,40 @@ class DietCalculatorApp:
         percentage_entry.grid(row=row, column=1, padx=5, pady=5)
         percentage_entry.insert(0, "0")
 # دکمه حذف برای حذف ردیف
-        remove_button = tk.Button(self.materials_frame, text="حذف", command=lambda: self.remove_material_row(row))
-        remove_button.grid(row=row, column=2, padx=5, pady=5)
-        self.materials_widgets.append((material_combobox, percentage_entry))
+        if row > 0:
+            remove_button = tk.Button(self.materials_frame, text="حذف", command=lambda: self.remove_material_row(row))
+            remove_button.grid(row=row, column=2, padx=5, pady=5)
+            self.materials_widgets.append((material_combobox, percentage_entry, remove_button))
+        else:
+            self.materials_widgets.append((material_combobox, percentage_entry))
     def remove_material_row(self, row):
+        """حذف یک ردیف مواد اولیه."""
+    # بررسی اینکه آیا اندیس معتبر است
+        if row < len(self.materials_widgets):
+        # حذف تمام ویجت‌های ردیف از پنجره
+            for widget in self.materials_widgets[row]:
+                widget.grid_forget()  # حذف از رابط کاربری
+                widget.destroy()  # آزادسازی منابع
 
-    # حذف ویجت‌های ردیف از پنجره
-        for widget in self.materials_widgets[row]:
-            widget.grid_forget()
-            widget.destroy()
-    
-    # حذف ردیف از لیست
-            del self.materials_widgets[row]
-    
-    # به‌روزرسانی شماره ردیف‌ها
-        for i, (combobox, entry, button) in enumerate(self.materials_widgets):
+        # حذف ردیف از لیست
+        del self.materials_widgets[row]
+
+         # به‌روزرسانی شماره ردیف‌ها
+        for i, widgets in enumerate(self.materials_widgets):
+            # بررسی اینکه آیا دکمه حذف وجود دارد
+            if len(widgets) == 3:
+                combobox, entry, button = widgets
+                button.config(command=lambda i=i: self.remove_material_row(i))  # به‌روزرسانی فرمان دکمه حذف
+            else:
+                combobox, entry = widgets
+
+            # به‌روزرسانی مکان ویجت‌ها
             combobox.grid(row=i, column=0, padx=5, pady=5)
-        entry.grid(row=i, column=1, padx=5, pady=5)
-        button.grid(row=i, column=2, padx=5, pady=5)   
+            entry.grid(row=i, column=1, padx=5, pady=5)
+            if len(widgets) == 3:
+                button.grid(row=i, column=2, padx=5, pady=5)
+            else:
+                print(f"خطا: تلاش برای حذف ردیفی که وجود ندارد. (اندیس: {row})")
     def open_add_material_window(self):
         add_window = tk.Toplevel(self.root)
         add_window.title("اضافه کردن ماده اولیه جدید")
