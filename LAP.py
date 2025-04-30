@@ -1162,7 +1162,14 @@ class DietCalculatorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("محاسبه جیره غذایی")
+        
+        # تعریف main_frame برای مدیریت ویجت‌ها
+        self.main_frame = tk.Frame(self.root)
+        self.main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        # اضافه کردن تول‌بار
         self.add_toolbar()
+
 
         # ترتیب استاندارد پارامترها
         self.standard_order = [
@@ -1206,87 +1213,105 @@ class DietCalculatorApp:
             "اینوزیتول (mg/kg)"
         ]
 
-        # بارگذاری گونه‌ها از پایگاه داده
-        self.species_data = load_species_from_db()
+        # بارگذاری داده‌ها
+        self.species_data = species_data
+        self.materials_data = materials_data
 
         # بخش گونه
-        tk.Label(root, text=reshape_text("گونه")).grid(row=0, column=0, padx=10, pady=10)
-        self.species_combobox = ttk.Combobox(root, values=list(species_data.keys()), width=30)
+        tk.Label(self.main_frame, text=reshape_text("گونه")).grid(row=0, column=0, padx=10, pady=10)
+        self.species_combobox = ttk.Combobox(self.main_frame, values=list(species_data.keys()), width=30)
         self.species_combobox.grid(row=0, column=1, padx=10, pady=10)
         self.species_combobox.set("")
-        
-
-
 
         # بخش مواد اولیه
-        self.materials_frame = tk.Frame(root)
+        self.materials_frame = tk.Frame(self.main_frame)
         self.materials_frame.grid(row=1, column=0, columnspan=4, padx=5, pady=5)
         self.materials_widgets = []
         self.add_material_row()
 
-        #
-        tk.Button(root, text=reshape_text("اضافه کردن ماده اولیه"), command=self.add_material_row).grid(row=2, column=0, padx=5, pady=5)
-        tk.Button(root, text=reshape_text("محاسبه جیره"), command=self.calculate_diet).grid(row=2, column=1, padx=5, pady=5)
+        tk.Button(self.main_frame, text=reshape_text("اضافه کردن ماده اولیه"), command=self.add_material_row).grid(row=2, column=0, padx=5, pady=5)
+        tk.Button(self.main_frame, text=reshape_text("محاسبه جیره"), command=self.calculate_diet).grid(row=2, column=1, padx=5, pady=5)
 
-        # جدول نتایج
-        self.results_table = ttk.Treeview(root, columns=("param", "calculated", "standard", "difference"), show="headings", height=15)
-        self.results_table.grid(row=3, column=0, columnspan=4, padx=5, pady=5)
-        self.results_table.heading("param", text=reshape_text("پارامتر"))
-        self.results_table.heading("calculated", text=reshape_text("محاسبه‌شده"))
-        self.results_table.heading("standard", text=reshape_text("استاندارد"))
-        self.results_table.heading("difference", text=reshape_text("تفاوت"))
+        # تعریف فریم برای جدول نتایج
+        self.results_table_frame = tk.Frame(self.main_frame)  # این بخش اضافه شده است
+        self.results_table_frame.grid(row=3, column=0, columnspan=4, padx=5, pady=5)
+
+        # تعریف جدول نتایج
+        self.results_table = ttk.Treeview(
+            self.results_table_frame,
+            columns=("param", "calculated", "standard", "difference"),
+            show="headings",
+            height=15
+        )
+        self.results_table.pack(fill="both", expand=True)
+        self.results_table.heading("param", text="پارامتر")
+        self.results_table.heading("calculated", text="محاسبه‌شده")
+        self.results_table.heading("standard", text="استاندارد")
+        self.results_table.heading("difference", text="تفاوت")
 
         self.results_table.tag_configure("less_than", foreground="red")
         self.results_table.tag_configure("greater_than", foreground="blue")
 
-       # به‌روزرسانی Combobox گونه‌ها
+        # به‌روزرسانی Combobox گونه‌ها
         self.update_species_combobox()
-        
-    def update_species_combobox(self):
-        self.species_combobox["values"] = list(self.species_data.keys())
+        # منوی تغییر تم
+        self.add_toolbar()
+
+    def change_theme(self, theme_name):
+        """تغییر تم برنامه"""
+        try:
+            self.style.theme_use(theme_name)
+        except tk.TclError:
+            messagebox.showerror("خطا", f"تم '{theme_name}' موجود نیست!")
+
+
+
+
 
     def add_material_row(self):
-        row = len(self.materials_widgets)
-        material_combobox = ttk.Combobox(self.materials_frame, values=list(materials_data.keys()), width=40)
-        material_combobox.grid(row=row, column=0, padx=5, pady=5)
-        material_combobox.set(list(materials_data.keys())[0] if materials_data else "")
+            row = len(self.materials_widgets)
+            material_combobox = ttk.Combobox(self.materials_frame, values=list(materials_data.keys()), width=40)
+            material_combobox.grid(row=row, column=0, padx=5, pady=5)
+            material_combobox.set(list(materials_data.keys())[0] if materials_data else "")
 
-        percentage_entry = tk.Entry(self.materials_frame)
-        percentage_entry.grid(row=row, column=1, padx=5, pady=5)
-        percentage_entry.insert(0, "0")
-# دکمه حذف برای حذف ردیف
-        if row > 0:
-            remove_button = tk.Button(self.materials_frame, text="حذف", command=lambda: self.remove_material_row(row))
-            remove_button.grid(row=row, column=2, padx=5, pady=5)
-            self.materials_widgets.append((material_combobox, percentage_entry, remove_button))
-        else:
-            self.materials_widgets.append((material_combobox, percentage_entry))
+            percentage_entry = tk.Entry(self.materials_frame)
+            percentage_entry.grid(row=row, column=1, padx=5, pady=5)
+            percentage_entry.insert(0, "0")
+
+            # دکمه حذف برای حذف ردیف
+            if row > 0:
+                remove_button = tk.Button(self.materials_frame, text="حذف", command=lambda: self.remove_material_row(row))
+                remove_button.grid(row=row, column=2, padx=5, pady=5)
+                self.materials_widgets.append((material_combobox, percentage_entry, remove_button))
+            else:
+                self.materials_widgets.append((material_combobox, percentage_entry))
+
     def remove_material_row(self, row):
         """حذف یک ردیف مواد اولیه."""
-    # بررسی اینکه آیا اندیس معتبر است
+        # بررسی اینکه آیا اندیس معتبر است
         if row < len(self.materials_widgets):
-        # حذف تمام ویجت‌های ردیف از پنجره
+            # حذف تمام ویجت‌های ردیف از پنجره
             for widget in self.materials_widgets[row]:
                 widget.grid_forget()  # حذف از رابط کاربری
                 widget.destroy()  # آزادسازی منابع
 
-        # حذف ردیف از لیست
-        del self.materials_widgets[row]
+            # حذف ردیف از لیست
+            del self.materials_widgets[row]
 
-         # به‌روزرسانی شماره ردیف‌ها
-        for i, widgets in enumerate(self.materials_widgets):
-            # بررسی اینکه آیا دکمه حذف وجود دارد
-            if len(widgets) == 3:
-                combobox, entry, button = widgets
-                button.config(command=lambda i=i: self.remove_material_row(i))  # به‌روزرسانی فرمان دکمه حذف
-            else:
-                combobox, entry = widgets
+            # به‌روزرسانی شماره ردیف‌ها
+            for i, widgets in enumerate(self.materials_widgets):
+                # بررسی اینکه آیا دکمه حذف وجود دارد
+                if len(widgets) == 3:
+                    combobox, entry, button = widgets
+                    button.config(command=lambda i=i: self.remove_material_row(i))  # به‌روزرسانی فرمان دکمه حذف
+                else:
+                    combobox, entry = widgets
 
-            # به‌روزرسانی مکان ویجت‌ها
-            combobox.grid(row=i, column=0, padx=5, pady=5)
-            entry.grid(row=i, column=1, padx=5, pady=5)
-            if len(widgets) == 3:
-                button.grid(row=i, column=2, padx=5, pady=5)
+                # به‌روزرسانی مکان ویجت‌ها
+                combobox.grid(row=i, column=0, padx=5, pady=5)
+                entry.grid(row=i, column=1, padx=5, pady=5)
+                if len(widgets) == 3:
+                    button.grid(row=i, column=2, padx=5, pady=5)
             else:
                 print(f"خطا: تلاش برای حذف ردیفی که وجود ندارد. (اندیس: {row})")
     def open_add_material_window(self):
@@ -1493,11 +1518,23 @@ class DietCalculatorApp:
         tools_menu.add_command(label="نمایش اطلاعات لایسنس", command=show_license_info)
         tools_menu.add_command(label="حذف لایسنس", command=delete_license_status)
         menubar.add_cascade(label="Tools", menu=tools_menu)
-
+        # منوی تغییر تم
+        theme_menu = tk.Menu(menubar, tearoff=0)
+        theme_menu.add_command(label="Clam", command=lambda: self.change_theme("clam"))
+        theme_menu.add_command(label="Alt", command=lambda: self.change_theme("alt"))
+        theme_menu.add_command(label="Default", command=lambda: self.change_theme("default"))
+        theme_menu.add_command(label="Classic", command=lambda: self.change_theme("classic"))
+        theme_menu.add_command(label="Vista", command=lambda: self.change_theme("vista"))
+        theme_menu.add_command(label="xpnative", command=lambda: self.change_theme("xpnative"))
+        menubar.add_cascade(label="Theme", menu=theme_menu)
         # منوی Help
         help_menu = tk.Menu(menubar, tearoff=0)
         help_menu.add_command(label="معرفی برنامه", command=self.show_about_window)
         menubar.add_cascade(label="Help", menu=help_menu)
+        # منوی Help
+    
+
+
 
         # اضافه کردن منو به برنامه
         self.root.config(menu=menubar)
