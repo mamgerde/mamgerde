@@ -1,5 +1,4 @@
-# --- Begin activator.py ---
-import customtkinter as ctk
+
 import hashlib
 import json
 from cryptography.fernet import Fernet
@@ -14,88 +13,65 @@ import arabic_reshaper
 import sqlite3
 import openpyxl
 from openpyxl.styles import Alignment
-from tkinter import messagebox, simpledialog
+from tkinter import messagebox
+# =======================================================================================================================================================================================
+# regionتابع اصلاح نمایش متن فارسی
+# =======================================================================================================================================================================================
+def reshape_text(text):
+    reshaped_text = get_display(arabic_reshaper.reshape(text))
+    return reshaped_text
+#endregion
 # =======================================================================================================================================================================================
 #region اضافه کردن قابلیت نمایش و حذف لایسنس
 # ======================================================================================================================================================================================
 # مسیر دایرکتوری فعلی
-# پیدا کردن مسیر فایل اجرایی (چه در حالت .exe و چه در حالت .py)
-if getattr(sys, 'frozen', False):  # اگر برنامه به EXE تبدیل شده باشد
-    CURRENT_DIRECTORY = os.path.dirname(sys.executable)
-else:
-    CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
-# تنظیم مسیر فایل لایسنس
+# مسیر فایل وضعیت فعال‌سازی
 ACTIVATION_STATUS_FILE = os.path.join(CURRENT_DIRECTORY, "activation_status.json")
-print(f"ACTIVATION_STATUS_FILE: {ACTIVATION_STATUS_FILE}")
 
-# Define a valid Base64 key for Fernet encryption
-SECRET_KEY = b'Y2hvb3NlQVN0cm9uZ0JhU2U2NEVuY3J5cHRpb25LZXk='  # Replace with your valid Fernet key
+# کلید رمزنگاری برای Fernet
+SECRET_KEY = b'Y2hvb3NlQVN0cm9uZ0JhU2U2NEVuY3J5cHRpb25LZXk='  # کلید Base64 معتبر و امن
 cipher = Fernet(SECRET_KEY)
-# پیدا کردن مسیر دایرکتوری فایل اجرایی یا کد
-if getattr(sys, 'frozen', False):  # اگر برنامه به EXE تبدیل شده باشد
-    CURRENT_DIRECTORY = os.path.dirname(sys.executable)
-else:  # در حالت اجرای مستقیم کد پایتون
-    CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
-# مسیر فایل activation_status.json
-ACTIVATION_STATUS_FILE = os.path.join(CURRENT_DIRECTORY, "activation_status.json")
+
+def encrypt_data(data):
+    """رمزنگاری داده‌ها."""
+    return cipher.encrypt(json.dumps(data).encode())
+
+
+def decrypt_data(encrypted_data):
+    """رمزگشایی داده‌ها."""
+    return json.loads(cipher.decrypt(encrypted_data).decode())
+
 
 def save_activation_status(status):
-    """ذخیره وضعیت فعال‌سازی در فایل JSON."""
-    with open(ACTIVATION_STATUS_FILE, "w") as file:
-        json.dump(status, file)
-    print(f"Activation status saved to: {ACTIVATION_STATUS_FILE}")
+    """ذخیره وضعیت فعال‌سازی به صورت رمزنگاری‌شده."""
+    try:
+        with open(ACTIVATION_STATUS_FILE, "wb") as file:
+            file.write(encrypt_data(status))
+        print(f"Activation status saved to: {ACTIVATION_STATUS_FILE}")
+    except Exception as e:
+        print(f"Error saving activation status: {e}")
+
 
 def load_activation_status():
-    """بارگذاری وضعیت فعال‌سازی از فایل JSON."""
-    if not os.path.exists(ACTIVATION_STATUS_FILE):  # اگر فایل وجود نداشت
+    """بارگذاری وضعیت فعال‌سازی از فایل رمزنگاری‌شده."""
+    if not os.path.exists(ACTIVATION_STATUS_FILE):
         print("Activation file not found.")
         return {"activated": False}
-    with open(ACTIVATION_STATUS_FILE, "r") as file:
-        return json.load(file)
 
-def check_existing_activation():
-    """بررسی فعال‌سازی قبلی."""
-    status = load_activation_status()
-    if status.get("activated"):
-        print("برنامه قبلاً فعال شده است.")
-        return True
-    return False
-def load_encrypted_file(file_path):
-    """
-    Load and decrypt the encrypted file.
-    """
-    with open(file_path, "rb") as file:
-        encrypted_data = file.read()
-    decrypted_data = cipher.decrypt(encrypted_data).decode()
-    return json.loads(decrypted_data)
-
-def save_activation_status(expiration_date):  # noqa: F811
-    """
-    Save the activation status and expiration date to a file.
-    """
-    status_data = {
-        "activated": True,
-        "expiration_date": expiration_date.strftime("%Y-%m-%d")
-    }
-    with open(ACTIVATION_STATUS_FILE, "w") as file:
-        json.dump(status_data, file)
-
-def load_activation_status():  # noqa: F811
-    """
-    Load the activation status from file.
-    """
-    if not os.path.exists(ACTIVATION_STATUS_FILE):
+    try:
+        with open(ACTIVATION_STATUS_FILE, "rb") as file:
+            encrypted_data = file.read()
+        return decrypt_data(encrypted_data)
+    except Exception as e:
+        print(f"Error loading activation status: {e}")
         return {"activated": False}
 
-    with open(ACTIVATION_STATUS_FILE, "r") as file:
-        return json.load(file)
 
 def validate_activation_data(data):
-    """
-    Validate the activation data.
-    """
+    """اعتبارسنجی داده‌های فعال‌سازی."""
     data_string = json.dumps({
         "name": data["name"],
         "email": data["email"],
@@ -107,7 +83,7 @@ def validate_activation_data(data):
     if data["activation_code"] != expected_code:
         return False, "Invalid activation code!"
 
-    # Check expiration date
+    # بررسی تاریخ انقضا
     issue_date = datetime.strptime(data["issue_date"], "%Y-%m-%d")
     expiration_date = issue_date + timedelta(days=data["duration_days"])
     if datetime.now() > expiration_date:
@@ -115,108 +91,52 @@ def validate_activation_data(data):
 
     return True, expiration_date
 
+
 def on_activate():
+    """فرآیند فعال‌سازی."""
     file_path = filedialog.askopenfilename(filetypes=[("Key Files", "*.key")])
     if not file_path:
-        messagebox.showerror("Error", "No file selected!")
-        sys.exit()  # خروج کامل از برنامه اگر هیچ فایلی انتخاب نشده باشد
+        messagebox.showerror("خطا", "هیچ فایلی انتخاب نشده است!")
+        return
 
     try:
-        data = load_encrypted_file(file_path)
+        with open(file_path, "rb") as file:
+            encrypted_key = file.read()
+        activation_data = decrypt_data(encrypted_key)
     except Exception as e:
-        messagebox.showerror("Error", f"Failed to load file: {str(e)}")
-        sys.exit()  # خروج کامل از برنامه اگر فایل خراب باشد
+        messagebox.showerror("خطا", f"بارگذاری فایل ناموفق بود: {str(e)}")
+        return
 
-    valid, result = validate_activation_data(data)
+    valid, result = validate_activation_data(activation_data)
     if valid:
-        save_activation_status(result)  # Save expiration date
-        messagebox.showinfo("Success", "Activation successful!")
-        root.destroy()  # Close the window
-        run_main_program()  # اجرای برنامه اصلی در صورت موفقیت فعال‌سازی
+        save_activation_status({"activated": True, "expiration_date": result.strftime("%Y-%m-%d")})
+        messagebox.showinfo("موفقیت", "فعال‌سازی با موفقیت انجام شد!")
+        root.destroy()  # بستن پنجره فعال‌سازی
+        run_main_program()  # اجرای برنامه اصلی
     else:
-        messagebox.showerror("Error", result)
-        sys.exit()  # خروج کامل از برنامه اگر کد فعال‌سازی نامعتبر باشد
-def run_main_program():
-    """اجرای برنامه اصلی."""
-    print("برنامه اصلی با موفقیت اجرا شد!")
-def check_existing_activation():  # noqa: F811
-    """
-    Check if activation is already valid.
-    """
+        messagebox.showerror("خطا", result)
+
+
+def check_existing_activation():
+    """بررسی فعال‌سازی قبلی."""
     status = load_activation_status()
     if status.get("activated"):
         expiration_date = datetime.strptime(status["expiration_date"], "%Y-%m-%d")
         if datetime.now() <= expiration_date:
-            messagebox.showinfo("Info", "Program already activated.")
-            root.destroy()
-            run_main_program()  # اجرای مستقیم برنامه اصلی اگر قبلاً فعال شده باشد
+            messagebox.showinfo("اطلاع", "برنامه قبلاً فعال شده است.")
+            run_main_program()
             return True
     return False
 
-# Build the GUI
-root = Tk()
-root.title("Activator")
 
-
-
-# Check if already activated
-if check_existing_activation():
-    pass  # برنامه اصلی قبلاً اجرا شده است
-else:
-    activate_button = Button(root, text="Activate", command=on_activate)
-    activate_button.pack(pady=20)
-
-    # اضافه کردن متد برای بستن برنامه در صورت بسته شدن پنجره اکتیو
-    def on_close():
-        sys.exit()  # خروج کامل از برنامه در صورت بسته شدن پنجره اکتیو
-
-    root.protocol("WM_DELETE_WINDOW", on_close)  # هندل بسته شدن پنجره
-    root.mainloop()
-
-
-
-ACTIVATION_STATUS_FILE = "activation_status.json"  # فایل وضعیت لایسنس
-
-# مسیر فایل JSON
-# پیدا کردن مسیر فایل اجرایی (چه در حالت .exe و چه در حالت .py)
-if getattr(sys, 'frozen', False):  # اگر برنامه به EXE تبدیل شده باشد
-    CURRENT_DIRECTORY = os.path.dirname(sys.executable)
-else:
-    CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
-
-# تنظیم مسیر فایل لایسنس
-ACTIVATION_STATUS_FILE = os.path.join(CURRENT_DIRECTORY, "activation_status.json")
-print(f"ACTIVATION_STATUS_FILE: {ACTIVATION_STATUS_FILE}")
-def load_activation_status():  # noqa: F811
-    """بارگذاری وضعیت فعال‌سازی از فایل JSON."""
-    if not os.path.exists(ACTIVATION_STATUS_FILE):  # اگر فایل وجود نداشت
-        print("Activation file not found. Creating a new one.")
-        return {"activated": False}
-    try:
-        with open(ACTIVATION_STATUS_FILE, "r") as file:
-            return json.load(file)
-    except json.JSONDecodeError:
-        print("Activation file is corrupted. Resetting activation status.")
-        return {"activated": False}
-def save_activation_status(status):  # noqa: F811
-    """ذخیره وضعیت فعال‌سازی در فایل JSON."""
-    try:
-        with open(ACTIVATION_STATUS_FILE, "w") as file:
-            json.dump(status, file)
-        print(f"Activation status saved to: {ACTIVATION_STATUS_FILE}")
-    except Exception as e:
-        print(f"Error saving activation status: {e}")
-def load_license_status():  # noqa: F811
-    """وضعیت لایسنس را از فایل بارگذاری می‌کند."""
-    if not os.path.exists(ACTIVATION_STATUS_FILE):
-        return {"activated": False}
-
-    with open(ACTIVATION_STATUS_FILE, "r") as file:
-        return json.load(file)
+def run_main_program():
+    """اجرای برنامه اصلی."""
+    print("برنامه اصلی با موفقیت اجرا شد!")
+    # کد برنامه اصلی شما در اینجا اجرا می‌شود.
 
 def show_license_info():
     """نمایش اطلاعات لایسنس."""
-    status = load_license_status()
+    status = load_activation_status()  # تابعی که وضعیت لایسنس را از فایل می‌خواند
     if not status.get("activated"):
         messagebox.showwarning("هشدار", "هیچ لایسنسی فعال نیست.")
         return
@@ -225,12 +145,11 @@ def show_license_info():
     remaining_days = (expiration_date - datetime.now()).days
 
     license_info = (
-        f"نام: {status.get('name', 'نامشخص')}\n"
+        f"وضعیت: فعال\n"
         f"تاریخ انقضا: {status['expiration_date']}\n"
         f"روزهای باقی‌مانده: {remaining_days} روز"
     )
     messagebox.showinfo("اطلاعات لایسنس", license_info)
-
 def delete_license_status():
     """حذف وضعیت لایسنس."""
     try:
@@ -240,35 +159,18 @@ def delete_license_status():
         else:
             messagebox.showwarning("هشدار", "هیچ لایسنسی برای حذف وجود ندارد.")
     except Exception as e:
-        print(f"Error deleting license file: {e}")
+        messagebox.showerror("خطا", f"خطایی در حذف لایسنس رخ داد: {e}")
+# رابط گرافیکی برای فعال‌سازی
+root = Tk()
+root.title("Activator")
 
-def show_license_info():  # noqa: F811
-    """نمایش اطلاعات لایسنس."""
-    status = load_license_status()
-    if not status.get("activated"):
-        messagebox.showwarning("هشدار", "هیچ لایسنسی فعال نیست.")
-        return
-
-    expiration_date = datetime.strptime(status["expiration_date"], "%Y-%m-%d")
-    remaining_days = (expiration_date - datetime.now()).days
-
-    license_info = (
-        f"نام: {status.get('name', 'نامشخص')}\n"
-        f"تاریخ انقضا: {status['expiration_date']}\n"
-        f"روزهای باقی‌مانده: {remaining_days} روز"
-    )
-    messagebox.showinfo("اطلاعات لایسنس", license_info)
-print(f"Current Directory: {CURRENT_DIRECTORY}")
-print(f"License File Path: {ACTIVATION_STATUS_FILE}")
-#endregion
-# =======================================================================================================================================================================================
-
-# =======================================================================================================================================================================================
-# regionتابع اصلاح نمایش متن فارسی
-# =======================================================================================================================================================================================
-def reshape_text(text):
-    reshaped_text = get_display(arabic_reshaper.reshape(text))
-    return reshaped_text
+if check_existing_activation():
+    root.destroy()  # اگر فعال‌سازی قبلاً انجام شده باشد، پنجره بسته می‌شود
+else:
+    activate_button = Button(root, text="Activate", command=on_activate)
+    activate_button.pack(pady=20)
+    root.mainloop()
+# --- End activator_fixed.py ---()
 #endregion
 # =======================================================================================================================================================================================
 # regionتنظیمات پایگاه داده SQLite
@@ -1590,7 +1492,7 @@ class DietCalculatorApp:
         """
         tk.Label(about_window, text=about_text, justify="right", padx=10, pady=10).pack()
 #endregion        
-#================
+#===============================================================================================================================================================================
 # region حل جیره
     def calculate_diet(self):
         """محاسبه جیره بر اساس مواد اولیه و درصدهای وارد شده"""
@@ -1721,10 +1623,6 @@ class DietCalculatorApp:
             messagebox.showinfo("ذخیره به اکسل", f"فایل با موفقیت ذخیره شد به آدرس:\n{file_path}")
         except Exception as e:
             messagebox.showerror("خطا", f"خطایی در ذخیره‌سازی پیش آمد: {e}")
-#endregion
-# =======================================================================================================================================================================================
-# region تم
-
 #endregion
 # =======================================================================================================================================================================================
 # regionاجرای اصلی برنامه
