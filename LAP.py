@@ -1219,10 +1219,9 @@ class DietCalculatorApp:
         self.materials_data = materials_data
 
         # بخش گونه
-        tk.Label(self.main_frame, text=reshape_text("گونه")).grid(row=0, column=0, padx=10, pady=10)
+        tk.Label(self.main_frame, text=reshape_text("گونه")).grid(row=0, column=0, padx=5, pady=5, sticky="e")
         self.species_combobox = ttk.Combobox(self.main_frame, values=list(species_data.keys()), width=30)
-        self.species_combobox.grid(row=0, column=1, padx=10, pady=10)
-        self.species_combobox.set("")
+        self.species_combobox.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
         # بخش مواد اولیه
         self.materials_frame = tk.Frame(self.main_frame)
