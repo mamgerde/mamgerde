@@ -1477,7 +1477,14 @@ class DietCalculatorApp:
             # جمع‌آوری اطلاعات مواد اولیه و درصدها
             material_weights = {}
             total_percentage = 0  # جمع درصد کل مواد اولیه
-            for combobox, entry in self.materials_widgets:
+
+            for widgets in self.materials_widgets:
+                # بررسی تعداد مقادیر
+                if len(widgets) == 3:
+                    combobox, entry, _ = widgets  # مقدار سوم (دکمه حذف) نادیده گرفته می‌شود
+                else:
+                    combobox, entry = widgets
+
                 material = combobox.get()
                 if material not in materials_data:
                     raise ValueError(f"ماده اولیه '{material}' نامعتبر است.")
